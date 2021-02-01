@@ -75,8 +75,8 @@ class VggCam(nn.Module):
         pre_logit = pre_logit.view(pre_logit.size(0), -1)
         logits = self.fc(pre_logit)
         
-        if self.mode != 'vote':
-            if return_cam:
+        if return_cam:
+            if self.mode != 'vote':
                 feature_map = x.detach().clone()
                 cam_weights = self.fc.weight[labels].squeeze()
                 if self.mode != 'origin':
@@ -87,8 +87,7 @@ class VggCam(nn.Module):
                         feature_map).mean(1, keepdim=False)
                 return cams, logits
         
-        else:
-            if return_cam:
+            else:
                 cam_list = []
                 feature_map = x.detach().clone()
                 cam_weights = self.fc.weight[labels].squeeze()
@@ -155,11 +154,10 @@ class VggAcol(AcolBase):
             feature_map_A = self.classifier_A[:-1](feature).clone().detach()
             erased_feat = logits_dict['erased_feat'].clone().detach()
             feature_map_B = self.classifier_B[:-1](erased_feat)
+            cam_weights_a = self.classifier_A[-1].weight[labels].squeeze()
+            cam_weights_b = self.classifier_B[-1].weight[labels].squeeze()
            
             if self.mode != 'vote':
-
-                cam_weights_a = self.classifier_A[-1].weight[labels].squeeze()
-                cam_weights_b = self.classifier_B[-1].weight[labels].squeeze()
 
                 if self.mode != 'origin':
                     cam_weights_a[cam_weights_a<0] = 0.
@@ -172,58 +170,43 @@ class VggAcol(AcolBase):
                         feature_map_A).mean(1, keepdim=False)
                 cams_B = (cam_weights_b.view(*feature_map_B.shape[:2], 1, 1) *
                         feature_map_B).mean(1, keepdim=False)
-            
+
             else :
-                cam_list = []
+                cam_list_a = []
+                cam_list_b = []
                 cams = feature_map_A
                 b, c, h, w = cams.shape
                 for i in range(b):
-                    lis = []
-                    maps = feature_map_A[i]
-                    maps = maps.view(c,-1)
+                    lis_a = []
+                    lis_b = []
+                    maps_a = feature_map_A[i]
+                    maps_a = maps_a.view(c,-1)
+                    maps_b = feature_map_B[i]
+                    maps_b = maps_b.view(c,-1)
                     for j in range(c):
-                        mapj = maps[j]
+                        mapj_a = maps_a[j]
                         if(cam_weights_a[i][j]>0):
-                            maxi, _ = mapj.topk(1,-1)
-                            maxi = maxi * 0.3
-                            lis.append(((mapj > maxi) + 0.).view(1,h,w))
-                    cams = torch.cat(lis, 0)
-                    cams = cams.sum(axis=0)
-                    cam_list.append(cams.view(1,h,w))
-                cams_A = torch.cat(cam_list,0)
-            
-
-
-  
-                cam_list = []
-                cams = feature_map_B
-                b, c, h, w = cams.shape
-                for i in range(b):
-                    lis = []
-                    maps = feature_map_B[i]
-                    maps = maps.view(c,-1)
-                    for j in range(c):
-                        mapj = maps[j]
+                            maxi_a, _ = mapj_a.topk(1,-1)
+                            maxi_a = maxi_a * self.rate
+                            lis_a.append(((mapj_a > maxi_a) + 0.).view(1,h,w))
+                        mapj_b = maps_b[j]
                         if(cam_weights_b[i][j]>0):
-                            maxi, _ = mapj.topk(1,-1)
-                            maxi = maxi * 0.3
-                            lis.append(((mapj > maxi) + 0.).view(1,h,w))
-                    cams = torch.cat(lis, 0)
-                    cams = cams.sum(axis=0)
-                    cam_list.append(cams.view(1,h,w))
-                cams_B = torch.cat(cam_list,0)
+                            maxi_b, _ = mapj_b.topk(1,-1)
+                            maxi_b = maxi_b * self.rate
+                            lis_b.append(((mapj_b > maxi_b) + 0.).view(1,h,w))
+                    cams_a = torch.cat(lis_a, 0)
+                    cams_a = cams_a.sum(axis=0)
+                    cam_list_a.append(cams_a.view(1,h,w))
+                    cams_b = torch.cat(lis_b, 0)
+                    cams_b = cams_b.sum(axis=0)
+                    cam_list_b.append(cams_b.view(1,h,w))
+                cams_A = torch.cat(cam_list_a,0)
+                cams_B = torch.cat(cam_list_b,0)
 
-            cams = torch.max(cams_A, cams_B)
+            cams = cams_A + cams_B
+
             return cams, logits_dict['logits']
 
-        """
-        if return_cam:
-            normalized_a = normalize_tensor(logits_dict['feat_map_a'].detach().clone())
-            normalized_b = logits_dict['feat_map_b'].detach().clone()
-            feature_map = torch.max(normalized_a, normalized_b)
-            cams = feature_map[range(batch_size), labels]
-            return cams, logits_dict['logits']
-        """
         return logits_dict
 
 
@@ -310,15 +293,10 @@ class VggSpg(nn.Module):
         attention, fused_attention = spg.compute_attention(
             feat_map=feat_map, labels=labels,
             logits_b1=logits_b1, logits_b2=logits_b2)
-        """
-        if return_cam:
-            feature_map = feat_map.clone().detach()
-            cams = feature_map[range(batch_size), labels]
-            return cams
-        """
 
-        if self.mode != 'vote':
-            if return_cam:
+
+        if return_cam:
+            if self.mode != 'vote':
                 feature_map = x.detach().clone()
                 cam_weights = self.SPG_A_4.weight[labels].squeeze()
                 if self.mode != 'origin':
@@ -329,8 +307,7 @@ class VggSpg(nn.Module):
                         feature_map).mean(1, keepdim=False)
                 return cams, logits
         
-        else:
-            if return_cam:
+            else:
                 cam_list = []
                 feature_map = x.detach().clone()
                 cam_weights = self.SPG_A_4.weight[labels].squeeze()

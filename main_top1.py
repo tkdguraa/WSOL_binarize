@@ -371,27 +371,6 @@ class Trainer(object):
 
 def main():
     trainer = Trainer()
-    """
-    print("===========================================================")
-    print("Start epoch 0 ...")
-    trainer.evaluate(epoch=0, split='val')
-    trainer.print_performances()
-    trainer.report(epoch=0, split='val')
-    trainer.save_checkpoint(epoch=0, split='val')
-    print("Epoch 0 done.")
-
-    for epoch in range(trainer.args.epochs):
-        print("===========================================================")
-        print("Start epoch {} ...".format(epoch + 1))
-        trainer.adjust_learning_rate(epoch + 1)
-        train_performance = trainer.train(split='train')
-        trainer.report_train(train_performance, epoch + 1, split='train')
-        trainer.evaluate(epoch + 1, split='val')
-        trainer.print_performances()
-        trainer.report(epoch + 1, split='val')
-        trainer.save_checkpoint(epoch + 1, split='val')
-        print("Epoch {} done.".format(epoch + 1))
-    """
     print("===========================================================")
     print("Final epoch evaluation on test set ...")
 

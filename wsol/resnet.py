@@ -260,13 +260,63 @@ class ResNetAcol(AcolBase):
                                         drop_threshold=self.drop_threshold)
 
         if return_cam:
-            normalized_a = normalize_tensor(
-                logits_dict['feat_map_a'].detach().clone())
-            normalized_b = normalize_tensor(
-                logits_dict['feat_map_b'].detach().clone())
-            feature_map = torch.max(normalized_a, normalized_b)
-            cams = feature_map[range(batch_size), labels]
-            return cams
+
+            feature_map_A = self.classifier_A[:-1](feature).clone().detach()
+            erased_feat = logits_dict['erased_feat'].clone().detach()
+            feature_map_B = self.classifier_B[:-1](erased_feat)
+            cam_weights_a = self.classifier_A[-1].weight[labels].squeeze()
+            cam_weights_b = self.classifier_B[-1].weight[labels].squeeze()
+           
+            if self.mode != 'vote':
+
+                if self.mode != 'origin':
+                    cam_weights_a[cam_weights_a<0] = 0.
+                    cam_weights_b[cam_weights_b<0] = 0.
+                if self.mode == 'bin':
+                    cam_weights_a[cam_weights_a>0] = 1.
+                    cam_weights_b[cam_weights_b>0] = 1.
+                
+                cams_A = (cam_weights_a.view(*feature_map_A.shape[:2], 1, 1) *
+                        feature_map_A).mean(1, keepdim=False)
+                cams_B = (cam_weights_b.view(*feature_map_B.shape[:2], 1, 1) *
+                        feature_map_B).mean(1, keepdim=False)
+                cams = cams_A + cams_B
+
+            else :
+                cam_list_a = []
+                cam_list_b = []
+                cams = feature_map_A
+                b, c, h, w = cams.shape
+                for i in range(b):
+                    lis_a = []
+                    lis_b = []
+                    maps_a = feature_map_A[i]
+                    maps_a = maps_a.view(c,-1)
+                    maps_b = feature_map_B[i]
+                    maps_b = maps_b.view(c,-1)
+                    for j in range(c):
+                        mapj_a = maps_a[j]
+                        if(cam_weights_a[i][j]>0):
+                            maxi_a, _ = mapj_a.topk(1,-1)
+                            maxi_a = maxi_a * self.rate
+                            lis_a.append(((mapj_a > maxi_a) + 0.).view(1,h,w))
+                        mapj_b = maps_b[j]
+                        if(cam_weights_b[i][j]>0):
+                            maxi_b, _ = mapj_b.topk(1,-1)
+                            maxi_b = maxi_b * self.rate
+                            lis_b.append(((mapj_b > maxi_b) + 0.).view(1,h,w))
+                    cams_a = torch.cat(lis_a, 0)
+                    cams_a = cams_a.sum(axis=0)
+                    cam_list_a.append(cams_a.view(1,h,w))
+                    cams_b = torch.cat(lis_b, 0)
+                    cams_b = cams_b.sum(axis=0)
+                    cam_list_b.append(cams_b.view(1,h,w))
+                cams_A = torch.cat(cam_list_a,0)
+                cams_B = torch.cat(cam_list_b,0)
+
+            cams = cams_A + cams_B
+
+            return cams, logits_dict['logits']
 
         return logits_dict
 

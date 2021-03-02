@@ -27,7 +27,7 @@ import torch
 import torch.nn as nn
 import torch.optim
 
-from config_1 import get_configs
+from config import get_configs
 from data_loaders import get_data_loader
 from inference_top1 import CAMComputer
 from util import string_contains_any

@@ -30,7 +30,7 @@ import warnings
 from util import Logger
 
 _DATASET_NAMES = ('CUB', 'ILSVRC', 'OpenImages')
-_ARCHITECTURE_NAMES = ('vgg16', 'resnet50', 'inception_v3', 'mobilenet_v2', 'shufflenet_v2')
+_ARCHITECTURE_NAMES = ('vgg16', 'resnet50', 'inception_v3')
 _METHOD_NAMES = ('cam', 'adl', 'acol', 'spg', 'has', 'cutmix','nan')
 _SPLITS = ('train', 'val', 'test')
 
@@ -90,13 +90,6 @@ def configure_scoremap_output_paths(args):
 
 def configure_log_folder(args):
     log_folder = ospj('train_log', args.experiment_name)
-    #if os.path.isdir(log_folder):
-    #    if args.override_cache:
-    #        shutil.rmtree(log_folder, ignore_errors=True)
-    #    else:
-    #        raise RuntimeError("Experiment with the same name exists: {}"
-    #                           .format(log_folder))
-    #os.makedirs(log_folder) 
     return log_folder
 
 
@@ -104,9 +97,8 @@ def configure_log(args):
     version = '_v1'
     if args.box_v2_metric:
         version = '_v2'
-    f_name = 'log_' + args.mode + '_' + str(args.binary_rate) + '_' + version +'.log'
+    f_name = 'log_' + args.mode + '_' + str(args.binary_rate) '_' + str(args.weight_range)+ '_' + version +'.log'
     log_file_name = ospj(args.log_folder, f_name)
-    #log_file_name = ospj(args.log_folder, 'log.log')
     Logger(log_file_name)
 
 
@@ -138,6 +130,7 @@ def get_configs():
     # Util
     parser.add_argument('--seed', type=int)
     parser.add_argument('--experiment_name', type=str, default='test_case')
+    parser.add_argument('--gpu', type=str, default='0')
     parser.add_argument('--override_cache', type=str2bool, nargs='?',
                         const=True, default=False)
     parser.add_argument('--workers', default=4, type=int,
@@ -237,10 +230,14 @@ def get_configs():
                         help='CutMix Mixing Probability')
     parser.add_argument('--mode', type=str, default='origin',
                         help='Method to generate CAM')
-    parser.add_argument('--binary_rate', type=float, default='0.15',
-                        help='binary mask threshold') 
+    parser.add_argument('--binary_rate', type=float, default=0.15,
+                        help='binary mask threshold')    
+    parser.add_argument('--weight_range', type=int, default=0,
+                        help='weight_range') 
 
     args = parser.parse_args()
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+
 
     check_dependency(args)
     args.log_folder = configure_log_folder(args)

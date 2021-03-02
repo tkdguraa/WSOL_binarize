@@ -203,84 +203,33 @@ class InceptionCam(nn.Module):
         logits = logits.view(logits.shape[0:2])
 
         if return_cam:
+            feature_map = x.detach().clone()
+            cam_weights = self.SPG_A4.weight[labels].squeeze()
+
             if self.mode != 'vote':
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
                 if self.mode != 'origin':
                     cam_weights[cam_weights<0]=0.
                 if self.mode == 'bin':
                     cam_weights[cam_weights>0]=1.
                 cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
                         feature_map).mean(1, keepdim=False)
-                return cams, logits
 
             else:
-                cam_list = []
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
-                cams = feature_map
-                b, c, h, w = cams.shape
-                for i in range(b):
-                    cnt = 0
-                    lis = []
-                    maps = feature_map[i]
-                    maps = maps.view(c,-1)
-                    for j in range(c):
-                        mapj = maps[j]
-                        if(cam_weights[i][j]>0):
-                            maxi, _ = mapj.topk(1,-1)
-                            maxi = maxi * self.rate
-                            lis.append(((mapj > maxi) + 0).view(1,h,w))
-                    cams = torch.cat(lis, 0)
-                    cams = cams.sum(axis=0)
-                    cam_list.append(cams.view(1,h,w))
-                cams = torch.cat(cam_list,0)
-                return cams, logits
+                k = (cam_weights.max(dim=1)[0] - cam_weights.min(dim=1)[0])/5
+                k = cam_weights.min(dim=1)[0] + self.range * k
+                cam_weights = torch.gt(cam_weights.t(), k).t() + 0.
+                cam = feature_map
+                b, c, h, w = cam.shape
+                cam = cam.view(b,c,-1)
+                max_num = torch.max(cam, 2)[0] * self.rate
+                cam = torch.transpose(cam,0,1).transpose(0,2)
+                cams = torch.gt(cam, max_num)
+                cams = torch.transpose(cams,0,2).transpose(0,1)
+                cams = cams.view(b,c,h,w)
+                cams = (cam_weights.view(*cams.shape[:2], 1, 1) *
+                        cams).mean(1, keepdim=False)
 
-
-        #if return_cam:
-        #    #feature_map = feat_map.clone().detach()
-        #    #cams = feature_map[range(batch_size), labels]
-        #    #return cams, logits
-
-        #    cam_pos_list = []
-        #    feature_map = x.detach().clone()
-        #    cam_weights = self.SPG_A4.weight[labels].squeeze()
-        #    cam_weights[cam_weights<0] = 0.
-        #    cams = feature_map
-        #    b, c, h, w = cams.shape
-
-            #for i in range(b):
-            #    lis_pos = []
-            #    maps = feature_map[i]
-            #    maps = maps.view(c,-1)
-            #    for j in range(c):
-            #        mapj = maps[j]
-            #        if(cam_weights[i][j]>0):
-            #            #lis_pos.append((cam_weights[i][j] * mapj).view(1,h,w))
-            #            maxi, _ = mapj.topk(1,-1)
-            #            maxi = maxi * 0.15
-            #            lis_pos.append(((mapj > maxi) + 0).view(1,h,w))
-            #            #lis_pos.append(mapj.view(1,h,w))
-            #    cams_pos = torch.cat(lis_pos, 0)
-            #    pos = cams_pos.sum(axis=0)
-            #    cam_pos_list.append(pos.view(1,h,w))
-            #cams_pos = torch.cat(cam_pos_list,0)
-            #for i in range(b):
-            #  cm_pos = cams_pos[i]
-            #  w, d = cm_pos.shape
-            #  cm_pos = cm_pos.view(-1)
-            #  maxi_pos = cm_pos.max()
-            #  maxi_pos = maxi_pos * 0.2 #0.25 is best now
-            #  idx_pos = ((cm_pos > maxi_pos) + 0)
-            #  cams_pos[i] = cams_pos[i] * idx_pos.view(w, d) 
-            #cams = cams_pos
-
-
-            #cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
-            #        feature_map).mean(1, keepdim=False)
-
-            #return cams
+            return cams, logits
 
         return {'logits': logits}
 
@@ -386,38 +335,35 @@ class InceptionAcol(AcolBase):
                 cams = cams_A + cams_B
 
             else :
-                cam_list_a = []
-                cam_list_b = []
-                cams = feature_map_A
-                b, c, h, w = cams.shape
-                for i in range(b):
-                    lis_a = []
-                    lis_b = []
-                    maps_a = feature_map_A[i]
-                    maps_a = maps_a.view(c,-1)
-                    maps_b = feature_map_B[i]
-                    maps_b = maps_b.view(c,-1)
-                    for j in range(c):
-                        mapj_a = maps_a[j]
-                        if(cam_weights_a[i][j]>0):
-                            maxi_a, _ = mapj_a.topk(1,-1)
-                            maxi_a = maxi_a * self.rate
-                            lis_a.append(((mapj_a > maxi_a) + 0.).view(1,h,w))
-                        mapj_b = maps_b[j]
-                        if(cam_weights_b[i][j]>0):
-                            maxi_b, _ = mapj_b.topk(1,-1)
-                            maxi_b = maxi_b * self.rate
-                            lis_b.append(((mapj_b > maxi_b) + 0.).view(1,h,w))
-                    cams_a = torch.cat(lis_a, 0)
-                    cams_a = cams_a.sum(axis=0)
-                    cam_list_a.append(cams_a.view(1,h,w))
-                    cams_b = torch.cat(lis_b, 0)
-                    cams_b = cams_b.sum(axis=0)
-                    cam_list_b.append(cams_b.view(1,h,w))
-                cams_A = torch.cat(cam_list_a,0)
-                cams_B = torch.cat(cam_list_b,0)
+                k_a = (cam_weights_a.max(dim=1)[0] - cam_weights_a.min(dim=1)[0])/5
+                k_a = cam_weights_a.min(dim=1)[0] + self.range * k_a
+                cam_weights_a = torch.gt(cam_weights_a.t(), k_a).t() + 0.
+                cam_a = feature_map_A
+                b, c, h, w = cam_a.shape
+                cam_a = cam_a.view(b,c,-1)
+                max_num_a = torch.max(cam_a, 2)[0] * self.rate
+                cam_a = torch.transpose(cam_a,0,1).transpose(0,2)
+                cams_a = torch.gt(cam_a, max_num_a)
+                cams_a = torch.transpose(cams_a,0,2).transpose(0,1)
+                cams_a = cams_a.view(b,c,h,w)
+                cams_a = (cam_weights_a.view(*cams_a.shape[:2], 1, 1) *
+                        cams_a).mean(1, keepdim=False)
 
-            cams = cams_A + cams_B
+                k_b = (cam_weights_b.max(dim=1)[0] - cam_weights_b.min(dim=1)[0])/5
+                k_b = cam_weights_b.min(dim=1)[0] + self.range * k_b
+                cam_weights_b = torch.gt(cam_weights_b.t(), k_b).t() + 0.
+                cam_b = feature_map_B
+                b, c, h, w = cam_b.shape
+                cam_b = cam_b.view(b,c,-1)
+                max_num_b = torch.max(cam_b, 2)[0] * self.rate
+                cam_b = torch.transpose(cam_b,0,1).transpose(0,2)
+                cams_b = torch.gt(cam_b, max_num_b)
+                cams_b = torch.transpose(cams_b,0,2).transpose(0,1)
+                cams_b = cams_b.view(b,c,h,w)
+                cams_b = (cam_weights_b.view(*cams_b.shape[:2], 1, 1) *
+                        cams_b).mean(1, keepdim=False)
+               
+                cams = cams_a + cams_b
 
             return cams, logits_dict['logits']
 
@@ -530,38 +476,33 @@ class InceptionSpg(nn.Module):
             logits_b1=logits_b1, logits_b2=logits_b2)
 
         if return_cam:
+            feature_map = x.detach().clone()
+            cam_weights = self.SPG_A4.weight[labels].squeeze()
+
             if self.mode != 'vote':
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
                 if self.mode != 'origin':
                     cam_weights[cam_weights<0]=0.
                 if self.mode == 'bin':
                     cam_weights[cam_weights>0]=1.
                 cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
                         feature_map).mean(1, keepdim=False)
-                return cams, logits
 
             else:
-                cam_list = []
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
-                cams = feature_map
-                b, c, h, w = cams.shape
-                for i in range(b):
-                    cnt = 0
-                    lis = []
-                    maps = feature_map[i]
-                    maps = maps.view(c,-1)
-                    for j in range(c):
-                        mapj = maps[j]
-                        if(cam_weights[i][j]>0):
-                            maxi, _ = mapj.topk(1,-1)
-                            maxi = maxi * self.rate
-                            lis.append(((mapj > maxi) + 0).view(1,h,w))
-                    cams = torch.cat(lis, 0)
-                    cams = cams.sum(axis=0)
-                    cam_list.append(cams.view(1,h,w))
-                return cams, logits
+                k = (cam_weights.max(dim=1)[0] - cam_weights.min(dim=1)[0])/5
+                k = cam_weights.min(dim=1)[0] + self.range * k
+                cam_weights = torch.gt(cam_weights.t(), k).t() + 0.
+                cam = feature_map
+                b, c, h, w = cam.shape
+                cam = cam.view(b,c,-1)
+                max_num = torch.max(cam, 2)[0] * self.rate
+                cam = torch.transpose(cam,0,1).transpose(0,2)
+                cams = torch.gt(cam, max_num)
+                cams = torch.transpose(cams,0,2).transpose(0,1)
+                cams = cams.view(b,c,h,w)
+                cams = (cam_weights.view(*cams.shape[:2], 1, 1) *
+                        cams).mean(1, keepdim=False)
+
+            return cams, logits
 
         return {'attention': attention, 'fused_attention': fused_attention,
                 'logits': logits, 'logits_b1': logits_b1,
@@ -650,40 +591,33 @@ class InceptionAdl(nn.Module):
 
 
         if return_cam:
+            feature_map = x.detach().clone()
+            cam_weights = self.SPG_A4.weight[labels].squeeze()
+
             if self.mode != 'vote':
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
                 if self.mode != 'origin':
                     cam_weights[cam_weights<0]=0.
                 if self.mode == 'bin':
                     cam_weights[cam_weights>0]=1.
                 cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *
                         feature_map).mean(1, keepdim=False)
-                return cams, logits
 
             else:
-                cam_list = []
-                feature_map = x.detach().clone()
-                cam_weights = self.SPG_A4.weight[labels].squeeze()
-                cams = feature_map
-                b, c, h, w = cams.shape
-                for i in range(b):
-                    cnt = 0
-                    lis = []
-                    maps = feature_map[i]
-                    maps = maps.view(c,-1)
-                    for j in range(c):
-                        mapj = maps[j]
-                        if(cam_weights[i][j]>0):
-                            maxi, _ = mapj.topk(1,-1)
-                            maxi = maxi * self.rate
-                            lis.append(((mapj > maxi) + 0).view(1,h,w))
-                    cams = torch.cat(lis, 0)
-                    cams = cams.sum(axis=0)
-                    cam_list.append(cams.view(1,h,w))
-                cams = torch.cat(cam_list,0)
-
-                return cams, logits
+                k = (cam_weights.max(dim=1)[0] - cam_weights.min(dim=1)[0])/5
+                k = cam_weights.min(dim=1)[0] + self.range * k
+                cam_weights = torch.gt(cam_weights.t(), k).t() + 0.
+                cam = feature_map
+                b, c, h, w = cam.shape
+                cam = cam.view(b,c,-1)
+                max_num = torch.max(cam, 2)[0] * self.rate
+                cam = torch.transpose(cam,0,1).transpose(0,2)
+                cams = torch.gt(cam, max_num)
+                cams = torch.transpose(cams,0,2).transpose(0,1)
+                cams = cams.view(b,c,h,w)
+                cams = (cam_weights.view(*cams.shape[:2], 1, 1) *
+                        cams).mean(1, keepdim=False)
+                        
+            return cams, logits
 
 
         return {'logits': logits}

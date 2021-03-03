@@ -73,6 +73,7 @@ class ResNetCam(nn.Module):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
+        self.range = kwargs['weight_range']
 
         stride_l3 = 1 if large_feature_map else 2
         self.inplanes = 64
@@ -165,6 +166,10 @@ class ResNetAcol(AcolBase):
 
         self.label = None
         self.drop_threshold = kwargs['acol_drop_threshold']
+        self.rate = kwargs['binary_rate']
+        self.mode = kwargs['mode']
+        self.range = kwargs['weight_range']
+
 
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2,
                                padding=3, bias=False)
@@ -292,7 +297,7 @@ class ResNetSpg(nn.Module):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
 
         stride_l3 = 1 if large_feature_map else 2
         self.inplanes = 64
@@ -442,7 +447,7 @@ class ResNetAdl(nn.Module):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
 
         self.stride_l3 = 1 if large_feature_map else 2
         self.inplanes = 64

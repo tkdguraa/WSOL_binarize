@@ -58,7 +58,7 @@ class VggCam(nn.Module):
         self.large_features = kwargs['large_feature_map']
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
 
         self.conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=1)
         self.relu = nn.ReLU(inplace=False)
@@ -114,7 +114,7 @@ class VggAcol(AcolBase):
         self.drop_threshold = kwargs['acol_drop_threshold']
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
 
         self.classifier_A = nn.Sequential(
             nn.Conv2d(512, 1024, kernel_size=3, stride=1, padding=1),
@@ -208,6 +208,7 @@ class VggSpg(nn.Module):
         self.lfs = kwargs['large_feature_map']
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
+        self.range = kwargs['weight_range']
 
         self.SPG_A_1 = nn.Sequential(
             nn.Conv2d(256, 512, kernel_size=3, padding=1),

@@ -138,6 +138,7 @@ class InceptionCam(nn.Module):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
+        self.range = kwargs['weight_range']
 
         self.large_feature_map = large_feature_map
 
@@ -244,7 +245,7 @@ class InceptionAcol(AcolBase):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
 
         self.large_feature_map = large_feature_map
 
@@ -374,10 +375,9 @@ class InceptionSpg(nn.Module):
     def __init__(self, num_classes=1000, large_feature_map=False, **kwargs):
         super(InceptionSpg, self).__init__()
 
-
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
         self.large_feature_map = large_feature_map
 
         self.Conv2d_1a_3x3 = BasicConv2d(3, 32, 3, stride=2, padding=1)
@@ -516,7 +516,7 @@ class InceptionAdl(nn.Module):
 
         self.rate = kwargs['binary_rate']
         self.mode = kwargs['mode']
-
+        self.range = kwargs['weight_range']
         self.adl_drop_rate = kwargs['adl_drop_rate']
         self.adl_threshold = kwargs['adl_drop_threshold']
 

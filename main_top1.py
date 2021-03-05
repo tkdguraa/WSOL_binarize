@@ -365,7 +365,6 @@ class Trainer(object):
             checkpoint = torch.load(checkpoint_path)
             self.model.load_state_dict(checkpoint['state_dict'], strict=True)
             print("Check {} loaded.".format(checkpoint_path))
-            #self.model = nn.DataParallel(self.model)
         else:
             raise IOError("No checkpoint {}.".format(checkpoint_path))
 

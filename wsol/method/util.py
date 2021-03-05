@@ -35,15 +35,8 @@ def normalize_tensor(x):
 
 def get_attention(feature, label):
     feat_map = feature.detach().clone()
-    #attention = feat_map.requires_grad_(True)[
-    #            range(feat_map.size(0)), label, :, :]
- 
-    #if not return_cam:
-    #  attention = feat_map.requires_grad_(True)[
-    #              range(feat_map.size(0)), label, :, :]
-    #else:
-    attention = feat_map
-
+    attention = feat_map.requires_grad_(True)[
+                range(feat_map.size(0)), label, :, :]
     attention = attention.unsqueeze(1)
     attention = normalize_tensor(attention)
     return attention

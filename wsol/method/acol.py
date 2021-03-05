@@ -21,7 +21,7 @@ class AcolBase(nn.Module):
         feat_map_b, logit_b = self._branch(feature=erased_feature,
                                            classifier=self.classifier_B)
         return {'logits': logits, 'logit_b': logit_b,
-                'feat_map_a': feat_map_a, 'feat_map_b': feat_map_b}
+                'feat_map_a': feat_map_a, 'feat_map_b': feat_map_b, 'erased_feat' : erased_feature}
 
     def _branch(self, feature, classifier):
         feat_map = classifier(feature)

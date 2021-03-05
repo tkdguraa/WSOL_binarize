@@ -163,7 +163,7 @@ class VggAcol(AcolBase):
                         feature_map_A).mean(1, keepdim=False)
                 cams_B = (cam_weights_b.view(*feature_map_B.shape[:2], 1, 1) *
                         feature_map_B).mean(1, keepdim=False)
-
+                cams = cams_A + cams_B
             else :
                 k_a = (cam_weights_a.max(dim=1)[0] - cam_weights_a.min(dim=1)[0])/5
                 k_a = cam_weights_a.min(dim=1)[0] + self.range * k_a

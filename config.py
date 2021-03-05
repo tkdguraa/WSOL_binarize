@@ -97,7 +97,7 @@ def configure_log(args):
     version = '_v1'
     if args.box_v2_metric:
         version = '_v2'
-    f_name = 'log_' + args.mode + '_' + str(args.binary_rate) '_' + str(args.weight_range)+ '_' + version +'.log'
+    f_name = 'log_' + args.mode + '_' + str(args.binary_rate) +'_' + str(args.weight_range)+ '_' + version +'.log'
     log_file_name = ospj(args.log_folder, f_name)
     Logger(log_file_name)
 

@@ -126,7 +126,8 @@ class Trainer(object):
             adl_drop_threshold=self.args.adl_threshold,
             acol_drop_threshold=self.args.acol_threshold,
             binary_rate = self.args.binary_rate,
-            mode = self.args.mode)
+            mode = self.args.mode,
+            weight_range = self.args.weight_range)
 
         #model = nn.DataParallel(model)
         model = model.cuda()

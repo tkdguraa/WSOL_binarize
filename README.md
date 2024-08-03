@@ -1,4 +1,6 @@
-## 1. WSOL training and evaluation
+## Discovering an inference recipe for weakly-supervised object localization
+This is the official PyTorch implementation for "Discovering an inference recipe for weakly-supervised object localization" [Pattern Recognition](https://www.sciencedirect.com/science/article/abs/pii/S0031320324005892).
+
 
 ### Datasets
 
